@@ -49,8 +49,8 @@ Dưới đây là danh sách các task chi tiết được chia nhỏ từ `PHAS
 ## Step 3: Complex Backend Service
 
 - [ ] **Task 3.1: Transfer Service - Foundation & Saga Logic (P2P)**
-  - **Acceptance:** Khởi tạo Spring Boot app (cổng 8083). Setup Flyway. Viết logic xử lý P2P transfer (cùng tiền tệ VND). Setup gRPC Client để gọi `ExecuteTransfer` sang Wallet Service. Implement Idempotency key logic.
-  - **Verify:** Dùng Testcontainers chạy Kafka/Postgres, viết test end-to-end cho luồng chuyển tiền P2P thành công và chuyển tiền thất bại (khi không đủ số dư).
+  - **Acceptance:** Khởi tạo Spring Boot app (cổng 8083). Setup Flyway. Viết logic xử lý P2P transfer (cùng tiền tệ VND). Setup gRPC Client để gọi `ExecuteTransfer` sang Wallet Service. Implement Idempotency key logic. **Lưu ý:** Phase 1 chưa dùng Kafka trong Transfer Service — giao tiếp hoàn toàn qua gRPC + `@Transactional`.
+  - **Verify:** Dùng Testcontainers chạy Postgres (Kafka được spin up cùng infra stack nhưng Transfer chưa consume/produce — chỉ cần cho FX Engine và infrastructure test), viết test end-to-end cho luồng chuyển tiền P2P thành công và chuyển tiền thất bại (khi không đủ số dư).
   - **Files:** Source code trong `services/transfer-service`.
 
 ## Step 4: External API Gateway

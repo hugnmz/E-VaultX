@@ -848,7 +848,7 @@ Mục tiêu: Xây dựng các service nền tảng và có dữ liệu tỷ giá
 - **Identity Service:** Đăng ký, đăng nhập JWT, email verify, refresh token. Tài khoản mặc định role USER.
 - **Wallet Service:** Tạo ví VND mặc định khi đăng ký, double-entry ledger, mock top-up, xem số dư (có thể dùng cache Redis), lịch sử giao dịch.
 - **Transfer Service (P2P nội tệ):** Chuyển tiền VND → VND đồng bộ với `@Transactional` + Redisson distributed lock + Idempotency key. Chưa có Kafka.
-- **API Gateway:** Nginx routing `/api/v1/auth`, `/api/v1/wallets`, `/api/v1/transfers`. TLS termination.
+- **API Gateway (BFF):** Spring Boot 3 + Spring GraphQL (cổng 8080). Định nghĩa `schema.graphqls`. JWT validation tại gateway. GraphiQL interface cho dev/testing. Các GraphQL Resolver gọi gRPC xuống Identity, Wallet, Transfer.
 - **Docker Compose:** đầy đủ PostgreSQL, Kafka, Redis, Nginx, C++ engine, các Java service.
 - **React cơ bản:** Đăng nhập, đăng ký, xem số dư, form chuyển tiền VND.
 

@@ -21,11 +21,13 @@
 - **Mapping:** Use MapStruct for DTO ↔ Entity mapping. No reflection-based mappers like ModelMapper.
 - **Locking:** Use JPA `@Lock(PESSIMISTIC_WRITE)` and Redisson for distributed locks during balance mutations.
 - **Idempotency:** Required for all transfer mutations.
+- **FX Rate Cache:** Redis key `fx:rate:{from}:{to}`, TTL **10 giây**. Luôn đọc từ cache, không hardcode tỷ giá.
 
 **Common Commands:**
 - Build Protobuf: `mvn clean install -pl proto-module`
 - Build All: `mvn clean install`
 - Start Infra: `docker-compose up -d`
+- Start API Gateway: `cd services/api-gateway && mvn spring-boot:run`
 
 ---
 

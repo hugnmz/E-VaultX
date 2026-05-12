@@ -38,7 +38,7 @@ cd services/api-gateway && mvn spring-boot:run
 ## Project Structure
 ```text
 /
-├── proto/                     → Định nghĩa gRPC Protocol Buffers dùng chung (.proto)
+├── proto-module/              → Định nghĩa gRPC Protocol Buffers dùng chung (.proto)
 ├── services/
 │   ├── api-gateway/           → Spring GraphQL BFF (Backend For Frontend)
 │   ├── identity-service/      → Auth, Users (REST + gRPC Server)
@@ -115,6 +115,6 @@ message BalanceResponse {
 - [ ] Thực hiện thành công 1 GraphQL mutation `transfer` gọi qua gRPC tới Transfer Service (cùng loại tiền, có trừ/cộng tiền ở Wallet Service via gRPC).
 - [ ] C++ Engine build và connect được tới Kafka.
 
-## Open Questions
-- Định dạng dữ liệu ngày tháng khi giao tiếp gRPC (Unix timestamp `int64` hay Google Protobuf `Timestamp`)? (Đề xuất: Dùng `int64` milliseconds cho đơn giản).
-- Có cần gRPC Health Checking Protocol (`grpc.health.v1`) không? (Đề xuất: Có, sẽ setup trong các service để K8s/Docker check liveness).
+## Decisions
+- **gRPC Timestamp Format:** Dùng `int64` milliseconds (Unix timestamp). Không dùng Google Protobuf `Timestamp` để giữ đơn giản và tránh dependency thêm.
+- **gRPC Health Check:** Có. Implement `grpc.health.v1` Health Checking Protocol trong tất cả gRPC service để K8s/Docker check liveness/readiness.
