@@ -1,8 +1,33 @@
 # CLAUDE.md
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+## Project Context: E-VaultX
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+**Description:** Personal Finance & Multi-Currency Wallet Platform with Double-Entry Ledger.
+**Architecture:** Multi-Protocol Microservices.
+- **External API:** GraphQL Gateway (BFF).
+- **Internal Service-to-Service:** gRPC (Protocol Buffers).
+- **Edge Cases:** REST API (OAuth2, File Uploads).
+- **Asynchronous:** Apache Kafka (KRaft mode), Outbox Pattern.
+
+**Tech Stack:**
+- **Backend:** Java 21, Spring Boot 3, Spring Data JPA, Spring GraphQL, Spring Security, gRPC.
+- **FX Rate Engine:** C++17, Boost.Asio, librdkafka.
+- **Infrastructure:** PostgreSQL 15, Redis 7, Kafka 3.x (KRaft).
+- **Frontend:** React 18.
+
+**Key Constraints & Rules:**
+- **Ledger:** Strict Double-Entry Ledger. Every transaction must have a DEBIT and CREDIT. Do not update balances directly outside of ledger entry flows.
+- **Database:** Strict 3NF. All primary keys are UUID v4. Use Flyway for schema migrations (no `ddl-auto=update`).
+- **Mapping:** Use MapStruct for DTO ↔ Entity mapping. No reflection-based mappers like ModelMapper.
+- **Locking:** Use JPA `@Lock(PESSIMISTIC_WRITE)` and Redisson for distributed locks during balance mutations.
+- **Idempotency:** Required for all transfer mutations.
+
+**Common Commands:**
+- Build Protobuf: `mvn clean install -pl proto-module`
+- Build All: `mvn clean install`
+- Start Infra: `docker-compose up -d`
+
+---
 
 ## 1. Think Before Coding
 
