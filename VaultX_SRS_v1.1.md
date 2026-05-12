@@ -13,7 +13,7 @@ Personal Finance & Multi-Currency Wallet Platform
 | Version | 1.0 (Initial Release) |
 | Status | Draft v1.1 — Tech Stack Updated |
 | Author | VaultX Engineering Team |
-| Technology Stack | Spring Boot 3 · Spring Data JPA · Spring Security · Apache Kafka · C++17 · React 18 |
+| Technology Stack | Spring Boot 4 · Spring Data JPA · Spring Security · Apache Kafka · C++17 · React 18 |
 | Classification | Internal / Confidential |
 | Date Created | May 2026 |
 
@@ -79,7 +79,7 @@ VaultX không bao gồm các chức năng: giao dịch cổ phiếu, blockchain/
 
 * Chris Richardson — Microservices Patterns (2018)
 
-* Spring Boot 3.x Reference Documentation — https://docs.spring.io/spring-boot
+* Spring Boot 4.x Reference Documentation — https://docs.spring.io/spring-boot
 
 * Apache Kafka Documentation — https://kafka.apache.org/documentation
 
@@ -142,7 +142,7 @@ Các nhóm chức năng chính của VaultX:
 
 ## **2.5 Design and Implementation Constraints**
 
-* Tất cả Java service sử dụng Spring Boot 3.x, Java 21 LTS. Ba thư viện core bắt buộc: Spring Boot, Spring Data JPA, Spring Security.
+* Tất cả Java service sử dụng Spring Boot 4.x, Java 21 LTS. Ba thư viện core bắt buộc: Spring Boot, Spring Data JPA, Spring Security.
 
 * C++ FX Engine sử dụng C++17 standard, không dùng thư viện có license không tương thích.
 
@@ -179,11 +179,11 @@ VaultX áp dụng kiến trúc microservices với 6 Java service riêng biệt,
 | Service | Language / Framework | Responsibility | Database |
 | ----- | ----- | ----- | ----- |
 | API Gateway (Nginx) | Nginx 1.25 (reverse proxy) | Reverse proxy, routing, rate limiting (nginx limit\_req), TLS termination, JWT pre-validation header passthrough | Nginx shared memory zone (rate limit state) |
-| Identity Service | Spring Boot 3 \+ Spring Security | Auth, JWT issue/refresh, OAuth2 (Google), KYC-lite upload, RBAC; Spring Security filter chain \+ custom UserDetailsService \+ JPA entity mapping | PostgreSQL; Flyway migration; MapStruct DTO↔Entity |
-| Wallet Service | Spring Boot 3 \+ Spring Data JPA | Multi-currency ledger, double-entry, balance query, tx history; JPA @Lock (PESSIMISTIC\_WRITE) cho balance mutation; Redisson distributed lock cho cross-instance safety | PostgreSQL; Flyway; Spring Data Redis (balance cache TTL 5s) |
-| Transfer Service | Spring Boot 3 \+ Spring Kafka \+ Spring Data JPA | P2P transfer, FX conversion, Saga choreography qua Kafka; @Transactional boundary rõ ràng; Outbox relay bằng Quartz Scheduler; idempotency key check qua JPA unique constraint | PostgreSQL; Flyway; Quartz job store (in-memory hoặc JDBC) |
-| Analytics Service | Spring Boot 3 \+ Spring Batch \+ Spring Data JPA | Spending aggregation (Spring Batch Job/Step/Chunk), CQRS materialized view, budget alert, CSV export; Kafka consumer cập nhật snapshot real-time | PostgreSQL; Flyway; Spring Batch JobRepository |
-| Notification Service | Spring Boot 3 \+ Spring Web MVC \+ Spring Kafka | Kafka consumer; email via JavaMailSender; WebSocket real-time qua STOMP over WebSocket (Spring MVC, không dùng reactive); session mapping qua Redis | Redis (STOMP session store); PostgreSQL (notification\_log) |
+| Identity Service | Spring Boot 4 \+ Spring Security | Auth, JWT issue/refresh, OAuth2 (Google), KYC-lite upload, RBAC; Spring Security filter chain \+ custom UserDetailsService \+ JPA entity mapping | PostgreSQL; Flyway migration; MapStruct DTO↔Entity |
+| Wallet Service | Spring Boot 4 \+ Spring Data JPA | Multi-currency ledger, double-entry, balance query, tx history; JPA @Lock (PESSIMISTIC\_WRITE) cho balance mutation; Redisson distributed lock cho cross-instance safety | PostgreSQL; Flyway; Spring Data Redis (balance cache TTL 5s) |
+| Transfer Service | Spring Boot 4 \+ Spring Kafka \+ Spring Data JPA | P2P transfer, FX conversion, Saga choreography qua Kafka; @Transactional boundary rõ ràng; Outbox relay bằng Quartz Scheduler; idempotency key check qua JPA unique constraint | PostgreSQL; Flyway; Quartz job store (in-memory hoặc JDBC) |
+| Analytics Service | Spring Boot 4 \+ Spring Batch \+ Spring Data JPA | Spending aggregation (Spring Batch Job/Step/Chunk), CQRS materialized view, budget alert, CSV export; Kafka consumer cập nhật snapshot real-time | PostgreSQL; Flyway; Spring Batch JobRepository |
+| Notification Service | Spring Boot 4 \+ Spring Web MVC \+ Spring Kafka | Kafka consumer; email via JavaMailSender; WebSocket real-time qua STOMP over WebSocket (Spring MVC, không dùng reactive); session mapping qua Redis | Redis (STOMP session store); PostgreSQL (notification\_log) |
 | FX Rate Engine | C++17 \+ Boost.Asio | TCP server, rate feed ingestion, spread calculation, Kafka publish | Stateless (Redis cache via Java consumer) |
 
 ## **3.3 Inter-Service Communication**

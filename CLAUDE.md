@@ -10,7 +10,7 @@
 - **Asynchronous:** Apache Kafka (KRaft mode), Outbox Pattern.
 
 **Tech Stack:**
-- **Backend:** Java 21, Spring Boot 3, Spring Data JPA, Spring GraphQL, Spring Security, gRPC.
+- **Backend:** Java 21, Spring Boot 4, Spring Data JPA, Spring GraphQL, Spring Security, gRPC.
 - **FX Rate Engine:** C++17, Boost.Asio, librdkafka.
 - **Infrastructure:** PostgreSQL 15, Redis 7, Kafka 3.x (KRaft).
 - **Frontend:** React 18.

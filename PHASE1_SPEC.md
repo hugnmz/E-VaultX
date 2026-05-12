@@ -12,8 +12,8 @@ Phase 1 tập trung vào:
 Mục tiêu là thiết lập xong bộ khung (scaffolding), luồng giao tiếp gRPC/GraphQL cơ bản, và CI/CD flow, tạo tiền đề để các phase sau phát triển các feature phức tạp hơn.
 
 ## Tech Stack
-- **BFF (Gateway):** Spring Boot 3 + Spring GraphQL (Java 21).
-- **Backend Services:** Spring Boot 3, Spring Data JPA, gRPC (Protobuf), Resilience4j.
+- **BFF (Gateway):** Spring Boot 4 + Spring GraphQL (Java 21).
+- **Backend Services:** Spring Boot 4, Spring Data JPA, gRPC (Protobuf), Resilience4j.
 - **FX Engine:** C++17, Boost.Asio, librdkafka.
 - **Database:** PostgreSQL 15+.
 - **Messaging:** Apache Kafka (KRaft).

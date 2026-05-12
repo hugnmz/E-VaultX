@@ -10,7 +10,7 @@ Dưới đây là danh sách các task chi tiết được chia nhỏ từ `PHAS
   - **Files:** `docker-compose.yml`
 
 - [ ] **Task 1.2: Khởi tạo Maven Multi-module Project**
-  - **Acceptance:** File `pom.xml` ở thư mục root được tạo, định nghĩa các module: `proto-module`, `services/identity-service`, `services/wallet-service`, `services/transfer-service`, `services/api-gateway`. Thiết lập Spring Boot 3 parent.
+  - **Acceptance:** File `pom.xml` ở thư mục root được tạo, định nghĩa các module: `proto-module`, `services/identity-service`, `services/wallet-service`, `services/transfer-service`, `services/api-gateway`. Thiết lập Spring Boot 4 parent.
   - **Verify:** Chạy `mvn clean install` tại thư mục root và xác nhận build SUCCESS.
   - **Files:** `pom.xml`, các file `pom.xml` rỗng (có schema cơ bản) bên trong các thư mục con tương ứng.
 

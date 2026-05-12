@@ -11,7 +11,7 @@ Personal Finance & Multi-Currency Wallet Platform
 | Version | 1.2 (Roadmap Revised – C++ Early Integration) |
 | Status | Draft v1.2 |
 | Author | VaultX Engineering Team |
-| Technology Stack | Spring Boot 3 · Spring Data JPA · Spring Security · Apache Kafka · C++17 · React 18 |
+| Technology Stack | Spring Boot 4 · Spring Data JPA · Spring Security · Apache Kafka · C++17 · React 18 |
 | Classification | Internal / Confidential |
 | Date Created | May 2026 (Revised May 2026) |
 
@@ -77,7 +77,7 @@ VaultX không bao gồm các chức năng: giao dịch cổ phiếu, blockchain/
 
 * Chris Richardson — Microservices Patterns (2018)
 
-* Spring Boot 3.x Reference Documentation — https://docs.spring.io/spring-boot
+* Spring Boot 4.x Reference Documentation — https://docs.spring.io/spring-boot
 
 * Apache Kafka Documentation — https://kafka.apache.org/documentation
 
@@ -142,7 +142,7 @@ Các nhóm chức năng chính của VaultX:
 
 ## **2.5 Design and Implementation Constraints**
 
-* Tất cả Java service sử dụng Spring Boot 3.x, Java 21 LTS. Ba thư viện core bắt buộc: Spring Boot, Spring Data JPA, Spring Security.
+* Tất cả Java service sử dụng Spring Boot 4.x, Java 21 LTS. Ba thư viện core bắt buộc: Spring Boot, Spring Data JPA, Spring Security.
 
 * C++ FX Engine sử dụng C++17 standard, không dùng thư viện có license không tương thích.
 
@@ -187,12 +187,12 @@ Giao tiếp bất đồng bộ vẫn được xử lý qua Apache Kafka (KRaft m
 
 | Service | Language / Framework | Responsibility | Database |
 | ----- | ----- | ----- | ----- |
-| GraphQL Gateway / BFF | Spring Boot 3 \+ Spring GraphQL (hoặc Node.js Apollo) | Single GraphQL endpoint cho Frontend, routing queries/mutations tới các gRPC/REST backend services, rate limiting, JWT validation | N/A (Stateless) |
-| Identity Service | Spring Boot 3 \+ Spring Security \+ gRPC | Auth, JWT issue/refresh, OAuth2 (REST), KYC upload (REST), RBAC; cung cấp gRPC endpoint cho user info | PostgreSQL; Flyway migration; MapStruct DTO↔Entity |
-| Wallet Service | Spring Boot 3 \+ Spring Data JPA \+ gRPC | Multi-currency ledger, double-entry, balance query qua gRPC, tx history; JPA @Lock (PESSIMISTIC\_WRITE); Redisson lock | PostgreSQL; Flyway; Spring Data Redis (balance cache TTL 5s) |
-| Transfer Service | Spring Boot 3 \+ Spring Kafka \+ Spring Data JPA \+ gRPC | P2P transfer, FX conversion, Saga choreography qua Kafka; @Transactional boundary rõ ràng; Outbox relay bằng Quartz | PostgreSQL; Flyway; Quartz job store (in-memory hoặc JDBC) |
-| Analytics Service | Spring Boot 3 \+ Spring Batch \+ Spring Data JPA \+ gRPC | Spending aggregation, CQRS materialized view, budget alert, CSV export (REST); Kafka consumer cập nhật snapshot | PostgreSQL; Flyway; Spring Batch JobRepository |
-| Notification Service | Spring Boot 3 \+ Spring Web MVC \+ Spring Kafka | Kafka consumer; email via JavaMailSender; WebSocket real-time qua STOMP over WebSocket (Spring MVC, không dùng reactive); session mapping qua Redis | Redis (STOMP session store); PostgreSQL (notification\_log) |
+| GraphQL Gateway / BFF | Spring Boot 4 \+ Spring GraphQL (hoặc Node.js Apollo) | Single GraphQL endpoint cho Frontend, routing queries/mutations tới các gRPC/REST backend services, rate limiting, JWT validation | N/A (Stateless) |
+| Identity Service | Spring Boot 4 \+ Spring Security \+ gRPC | Auth, JWT issue/refresh, OAuth2 (REST), KYC upload (REST), RBAC; cung cấp gRPC endpoint cho user info | PostgreSQL; Flyway migration; MapStruct DTO↔Entity |
+| Wallet Service | Spring Boot 4 \+ Spring Data JPA \+ gRPC | Multi-currency ledger, double-entry, balance query qua gRPC, tx history; JPA @Lock (PESSIMISTIC\_WRITE); Redisson lock | PostgreSQL; Flyway; Spring Data Redis (balance cache TTL 5s) |
+| Transfer Service | Spring Boot 4 \+ Spring Kafka \+ Spring Data JPA \+ gRPC | P2P transfer, FX conversion, Saga choreography qua Kafka; @Transactional boundary rõ ràng; Outbox relay bằng Quartz | PostgreSQL; Flyway; Quartz job store (in-memory hoặc JDBC) |
+| Analytics Service | Spring Boot 4 \+ Spring Batch \+ Spring Data JPA \+ gRPC | Spending aggregation, CQRS materialized view, budget alert, CSV export (REST); Kafka consumer cập nhật snapshot | PostgreSQL; Flyway; Spring Batch JobRepository |
+| Notification Service | Spring Boot 4 \+ Spring Web MVC \+ Spring Kafka | Kafka consumer; email via JavaMailSender; WebSocket real-time qua STOMP over WebSocket (Spring MVC, không dùng reactive); session mapping qua Redis | Redis (STOMP session store); PostgreSQL (notification\_log) |
 | FX Rate Engine | C++17 \+ Boost.Asio | TCP server, rate feed ingestion, spread calculation, Kafka publish | Stateless (Redis cache via Java consumer) |
 
 ## **3.3 Inter-Service Communication**
@@ -848,7 +848,7 @@ Mục tiêu: Xây dựng các service nền tảng và có dữ liệu tỷ giá
 - **Identity Service:** Đăng ký, đăng nhập JWT, email verify, refresh token. Tài khoản mặc định role USER.
 - **Wallet Service:** Tạo ví VND mặc định khi đăng ký, double-entry ledger, mock top-up, xem số dư (có thể dùng cache Redis), lịch sử giao dịch.
 - **Transfer Service (P2P nội tệ):** Chuyển tiền VND → VND đồng bộ với `@Transactional` + Redisson distributed lock + Idempotency key. Chưa có Kafka.
-- **API Gateway (BFF):** Spring Boot 3 + Spring GraphQL (cổng 8080). Định nghĩa `schema.graphqls`. JWT validation tại gateway. GraphiQL interface cho dev/testing. Các GraphQL Resolver gọi gRPC xuống Identity, Wallet, Transfer.
+- **API Gateway (BFF):** Spring Boot 4 + Spring GraphQL (cổng 8080). Định nghĩa `schema.graphqls`. JWT validation tại gateway. GraphiQL interface cho dev/testing. Các GraphQL Resolver gọi gRPC xuống Identity, Wallet, Transfer.
 - **Docker Compose:** đầy đủ PostgreSQL, Kafka, Redis, Nginx, C++ engine, các Java service.
 - **React cơ bản:** Đăng nhập, đăng ký, xem số dư, form chuyển tiền VND.
 
