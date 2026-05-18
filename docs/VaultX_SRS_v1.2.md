@@ -164,7 +164,7 @@ Các nhóm chức năng chính của VaultX:
 
 * **MapStruct mapper** phải được đặt trong `infrastructure/adapter/outbound/persistence/` để mapping giữa Domain Entity và JPA Entity.
 
-* **gRPC Protobuf message** là DTO của lớp Infrastructure. Adapter trong `infrastructure/adapter/inbound/grpc/` phải dịch Protobuf → Domain Command/Query (Anti-Corruption Layer).
+* **gRPC Protobuf message** (chỉ áp dụng cho service giao tiếp với Rust FX Engine) là DTO của lớp Infrastructure. Adapter phải dịch Protobuf → Domain Command/Query (Anti-Corruption Layer).
 
 ## **2.6 Assumptions and Dependencies**
 
@@ -198,29 +198,31 @@ VaultX áp dụng **Domain-Driven Design (DDD)** kết hợp **Hexagonal Archite
 
 VaultX áp dụng kiến trúc microservices với 6 Java service riêng biệt, mỗi service có database riêng (Database-per-Service pattern). Hệ thống áp dụng kiến trúc đa giao thức (Multi-Protocol Architecture) để tối ưu hoá giao tiếp:
 1. **GraphQL (External API):** Giao tiếp giữa Frontend (React) và Backend thông qua một API Gateway / BFF (Backend For Frontend). GraphQL giúp tránh over-fetching dữ liệu cho các màn hình phức tạp.
-2. **gRPC (Internal Service-to-Service):** Giao tiếp đồng bộ nội bộ giữa các Java Microservices sử dụng gRPC (Protobuf) để đạt hiệu năng cao và strongly-typed contract.
-3. **REST API (Edge Cases):** Được giữ lại cho các luồng đặc thù như OAuth2 (Google Login), Webhook, hoặc Upload file (multipart/form-data).
+2. **REST (Internal Service-to-Service):** Giao tiếp đồng bộ nội bộ giữa các Java Microservices sử dụng REST API qua HTTP. Circuit breaker pattern được implement bằng Resilience4j tại mỗi REST client (RestClient/WebClient).
+3. **gRPC (Java ↔ Rust FX Engine):** Chỉ sử dụng cho giao tiếp giữa Java services và Rust FX Rate Engine. Protobuf đảm bảo strongly-typed contract và hiệu năng cao cho cross-language communication.
+4. **REST API (Edge Cases):** Một số endpoint đặc thù như OAuth2 (Google Login), Webhook, hoặc Upload file (multipart/form-data) dùng REST trực tiếp từ client.
 
-Giao tiếp bất đồng bộ vẫn được xử lý qua Apache Kafka (KRaft mode). Rust FX Rate Engine là component biệt lập, giao tiếp với Java consumer qua Kafka topic. Mỗi Java service áp dụng **Hexagonal Architecture (Ports & Adapters)** với 3 lớp: `domain/` (Entities, Aggregates, Value Objects, Domain Events — Java thuần, không phụ thuộc framework), `application/` (Use Cases, Ports — phụ thuộc chỉ vào domain), `infrastructure/` (REST Controllers, gRPC Services, JPA Repositories, Kafka Adapters — implements Ports). DTO↔Entity mapping qua MapStruct (trong lớp infrastructure) và schema versioning qua Flyway.
+Giao tiếp bất đồng bộ vẫn được xử lý qua Apache Kafka (KRaft mode). Rust FX Rate Engine là component biệt lập, giao tiếp với Java services qua Kafka (publish rates) và gRPC (query rates, config). Mỗi Java service áp dụng **Hexagonal Architecture (Ports & Adapters)** với 3 lớp: `domain/` (Entities, Aggregates, Value Objects, Domain Events — Java thuần, không phụ thuộc framework), `application/` (Use Cases, Ports — phụ thuộc chỉ vào domain), `infrastructure/` (REST Controllers, JPA Repositories, Kafka Adapters — implements Ports). DTO↔Entity mapping qua MapStruct (trong lớp infrastructure) và schema versioning qua Flyway.
 
 ## **3.2 Service Catalogue**
 
 | Service | Language / Framework | Responsibility | Database |
 | ----- | ----- | ----- | ----- |
-| GraphQL Gateway / BFF | Spring Boot 4 \+ Spring GraphQL (hoặc Node.js Apollo) | Single GraphQL endpoint cho Frontend, routing queries/mutations tới các gRPC/REST backend services, rate limiting, JWT validation | N/A (Stateless) |
-| Identity Service | Spring Boot 4 \+ Spring Security \+ gRPC | Auth, JWT issue/refresh, OAuth2 (REST), KYC upload (REST), RBAC; cung cấp gRPC endpoint cho user info | PostgreSQL; Flyway migration; MapStruct DTO↔Entity |
-| Wallet Service | Spring Boot 4 \+ Spring Data JPA \+ gRPC | Multi-currency ledger, double-entry, balance query qua gRPC, tx history; JPA @Lock (PESSIMISTIC\_WRITE); Redisson lock | PostgreSQL; Flyway; Spring Data Redis (balance cache TTL 5s) |
-| Transfer Service | Spring Boot 4 \+ Spring Kafka \+ Spring Data JPA \+ gRPC | P2P transfer, FX conversion, Saga choreography qua Kafka; @Transactional boundary rõ ràng; Outbox relay bằng Quartz | PostgreSQL; Flyway; Quartz job store (in-memory hoặc JDBC) |
-| Analytics Service | Spring Boot 4 \+ Spring Batch \+ Spring Data JPA \+ gRPC | Spending aggregation, CQRS materialized view, budget alert, CSV export (REST); Kafka consumer cập nhật snapshot | PostgreSQL; Flyway; Spring Batch JobRepository |
+| GraphQL Gateway / BFF | Spring Boot 4 \+ Spring GraphQL (hoặc Node.js Apollo) | Single GraphQL endpoint cho Frontend, routing queries/mutations tới các REST backend services, rate limiting, JWT validation | N/A (Stateless) |
+| Identity Service | Spring Boot 4 \+ Spring Security | Auth, JWT issue/refresh, OAuth2 (REST), KYC upload (REST), RBAC; cung cấp REST endpoint cho user info | PostgreSQL; Flyway migration; MapStruct DTO↔Entity |
+| Wallet Service | Spring Boot 4 \+ Spring Data JPA | Multi-currency ledger, double-entry, balance query, tx history; JPA @Lock (PESSIMISTIC\_WRITE); Redisson lock; gRPC client để query FX rate từ Rust Engine | PostgreSQL; Flyway; Spring Data Redis (balance cache TTL 5s) |
+| Transfer Service | Spring Boot 4 \+ Spring Kafka \+ Spring Data JPA | P2P transfer, FX conversion, Saga choreography qua Kafka; @Transactional boundary rõ ràng; Outbox relay bằng Quartz; gRPC client để query FX rate từ Rust Engine | PostgreSQL; Flyway; Quartz job store (in-memory hoặc JDBC) |
+| Analytics Service | Spring Boot 4 \+ Spring Batch \+ Spring Data JPA | Spending aggregation, CQRS materialized view, budget alert, CSV export (REST); Kafka consumer cập nhật snapshot | PostgreSQL; Flyway; Spring Batch JobRepository |
 | Notification Service | Spring Boot 4 \+ Spring Web MVC \+ Spring Kafka | Kafka consumer; email via JavaMailSender; WebSocket real-time qua STOMP over WebSocket (Spring MVC, không dùng reactive); session mapping qua Redis | Redis (STOMP session store); PostgreSQL (notification\_log) |
 | FX Rate Engine | Rust \+ Tokio | Async TCP server, rate feed ingestion, spread calculation, Kafka publish | Stateless (Redis cache via Java consumer) |
 
 ## **3.3 Inter-Service Communication**
 
-### **3.3.1 Synchronous Communication (GraphQL, gRPC, REST)**
+### **3.3.1 Synchronous Communication (GraphQL, REST, gRPC)**
 
-*   **External (Client → BFF):** Client gọi API qua duy nhất một endpoint GraphQL (vd: `/graphql`) tại GraphQL Gateway. Gateway sẽ validate JWT, extract user context, và phân giải (resolve) các GraphQL query/mutation thành các lời gọi tương ứng xuống các backend services.
-*   **Internal (Service → Service):** Các backend Java services gọi lẫn nhau thông qua **gRPC** qua HTTP/2. Các file `.proto` định nghĩa contract rõ ràng và được quản lý chung trong một module/thư mục. Circuit breaker pattern được implement bằng Resilience4j tại mỗi gRPC client stub.
+*   **External (Client → BFF):** Client gọi API qua duy nhất một endpoint GraphQL (vd: `/graphql`) tại GraphQL Gateway. Gateway sẽ validate JWT, extract user context, và phân giải (resolve) các GraphQL query/mutation thành các lời gọi REST tương ứng xuống các backend services.
+*   **Internal (Java Service → Java Service):** Các backend Java services gọi lẫn nhau thông qua **REST API** (HTTP). Circuit breaker pattern được implement bằng Resilience4j tại mỗi REST client.
+*   **Java ↔ Rust FX Engine:** Giao tiếp đồng bộ giữa Java services (Wallet, Transfer) và Rust FX Engine sử dụng **gRPC** qua HTTP/2. Các file `.proto` định nghĩa contract rõ ràng, được quản lý chung trong module `vaultx-proto`.
 *   **REST Edge Cases:** Client vẫn gọi REST trực tiếp (hoặc qua Gateway routing) cho các endpoint như: `/api/v1/auth/oauth2` (redirect flow) hoặc `/api/v1/kyc/upload` (multipart form).
 
 ### **3.3.2 Asynchronous Communication (Kafka Topics)**
@@ -285,8 +287,8 @@ com.vaultx.{service}/
 └── infrastructure/
     ├── adapter/
     │   ├── inbound/
-    │   │   ├── rest/     # @RestController (OAuth2, KYC upload)
-    │   │   ├── grpc/     # gRPC Service implementations
+    │   │   ├── rest/     # @RestController
+    │   │   ├── grpc/     # gRPC client stubs (chỉ cho service giao tiếp với FX Engine)
     │   │   └── kafka/    # Kafka Consumers (@KafkaListener)
     │   └── outbound/
     │       ├── persistence/  # JPA Entities + Spring Data Repos + Port Adapters
@@ -937,7 +939,7 @@ Mục tiêu: Xây dựng các service nền tảng và có dữ liệu tỷ giá
 - **Identity Service:** Đăng ký, đăng nhập JWT, email verify, refresh token. Tài khoản mặc định role USER.
 - **Wallet Service:** Tạo ví VND mặc định khi đăng ký, double-entry ledger, mock top-up, xem số dư (có thể dùng cache Redis), lịch sử giao dịch.
 - **Transfer Service (P2P nội tệ):** Chuyển tiền VND → VND đồng bộ với `@Transactional` + Redisson distributed lock + Idempotency key. Chưa có Kafka.
-- **API Gateway (BFF):** Spring Boot 4 + Spring GraphQL (cổng 8080). Định nghĩa `schema.graphqls`. JWT validation tại gateway. GraphiQL interface cho dev/testing. Các GraphQL Resolver gọi gRPC xuống Identity, Wallet, Transfer.
+- **API Gateway (BFF):** Spring Boot 4 + Spring GraphQL (cổng 8080). Định nghĩa `schema.graphqls`. JWT validation tại gateway. GraphiQL interface cho dev/testing. Các GraphQL Resolver gọi REST xuống Identity, Wallet, Transfer.
 - **Docker Compose:** đầy đủ PostgreSQL, Kafka, Redis, Nginx, Rust engine, các Java service.
 - **React cơ bản:** Đăng nhập, đăng ký, xem số dư, form chuyển tiền VND.
 
