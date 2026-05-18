@@ -8,10 +8,10 @@ Personal Finance & Multi-Currency Wallet Platform
 | Field | Value |
 | ----- | ----- |
 | Document Title | VaultX — Software Requirements Specification |
-| Version | 1.2 (Roadmap Revised – C++ Early Integration) |
-| Status | Draft v1.2 |
+| Version | 1.3 (DDD + Hexagonal Architecture + Rust FX Engine) |
+| Status | Draft v1.3 |
 | Author | VaultX Engineering Team |
-| Technology Stack | Spring Boot 4 · Spring Data JPA · Spring Security · Apache Kafka · C++17 · React 18 |
+| Technology Stack | Spring Boot 4 · Spring Data JPA · Spring Security · Apache Kafka · Rust · React 18 |
 | Classification | Internal / Confidential |
 | Date Created | May 2026 (Revised May 2026) |
 
@@ -33,7 +33,7 @@ VaultX là nền tảng ví điện tử đa tiền tệ dành cho người dùn
 
 * Chuyển tiền nội bộ (P2P) và chuyển đổi ngoại tệ (FX conversion) giữa các ví.
 
-* Cung cấp tỷ giá thời gian thực thông qua FX Rate Engine được xây dựng bằng C++17.
+* Cung cấp tỷ giá thời gian thực thông qua FX Rate Engine được xây dựng bằng Rust.
 
 * Phân tích chi tiêu (spending analytics) theo danh mục, thời gian, và ngân sách.
 
@@ -49,7 +49,7 @@ VaultX không bao gồm các chức năng: giao dịch cổ phiếu, blockchain/
 | ----- | ----- |
 | SRS | Software Requirements Specification |
 | FX / FX Rate | Foreign Exchange — tỷ giá chuyển đổi giữa hai loại tiền tệ |
-| FX Rate Engine | Module C++17 nhận tỷ giá feed, tính toán spread, và publish lên Kafka |
+| FX Rate Engine | Module Rust (Tokio async runtime) nhận tỷ giá feed, tính toán spread, và publish lên Kafka |
 | Double-Entry Ledger | Phương pháp kế toán kép: mỗi giao dịch tạo đúng 2 bản ghi (debit \+ credit) để tổng ledger cân bằng về 0 |
 | Saga Pattern | Mẫu thiết kế cho distributed transaction không dùng 2PC; sử dụng compensating transaction khi có lỗi |
 | Idempotency Key | Khóa định danh duy nhất cho một request, đảm bảo cùng request gửi nhiều lần chỉ được xử lý một lần |
@@ -65,6 +65,8 @@ VaultX không bao gồm các chức năng: giao dịch cổ phiếu, blockchain/
 | Mid Rate | Tỷ giá trung tâm \= (bid \+ ask) / 2 |
 | Flyway | Database Migration Tool — quản lý versioned SQL migration script; schema thay đổi được track và apply theo thứ tự |
 | TCP | Transmission Control Protocol — giao thức truyền tải hướng kết nối có xác nhận (acknowledgment-based) |
+| Tokio | Async runtime cho Rust — cung cấp TCP server, I/O bất đồng bộ, và task scheduling |
+| prost | Protobuf code generator cho Rust — dùng để serialize/deserialize binary message trong FX Engine |
 | MapStruct | Compile-time DTO↔Entity mapper; không dùng reflection, sinh code Java thuần tại build time; tích hợp với Spring và JPA entity |
 
 ## **1.4 References**
@@ -93,10 +95,10 @@ Tài liệu được cấu trúc gồm 9 phần chính: (1) Introduction, (2) Ov
 
 VaultX là hệ thống độc lập (greenfield), không kế thừa codebase từ hệ thống nào trước đó. Hệ thống được thiết kế theo kiến trúc microservices, giao tiếp với các thành phần ngoài qua REST API và Kafka. VaultX có thể tích hợp với các provider tỷ giá thực trong tương lai thay thế mock feed hiện tại.
 
-| Context: VaultX hoạt động tương tự các nền tảng như MoMo, ZaloPay, GrabPay về nghiệp vụ — nhưng được xây dựng từ đầu với kiến trúc rõ ràng hơn và component C++ FX Engine để học sâu về hệ thống phân tán. |
+| Context: VaultX hoạt động tương tự các nền tảng như MoMo, ZaloPay, GrabPay về nghiệp vụ — nhưng được xây dựng từ đầu với kiến trúc rõ ràng hơn và component Rust FX Engine để học sâu về hệ thống phân tán và systems programming. |
 | :---- |
 
-> **Lưu ý về chiến lược phát triển:** C++ FX Engine sẽ được phát triển song song với các service Java ngay từ giai đoạn đầu của dự án, thay vì mock tạm thời rồi thay thế sau. Điều này đảm bảo dữ liệu tỷ giá luôn đến từ engine thật, đồng thời giúp nhóm phát triển song song cả hai ngôn ngữ.
+> **Lưu ý về chiến lược phát triển:** Rust FX Engine sẽ được phát triển song song với các service Java ngay từ giai đoạn đầu của dự án, thay vì mock tạm thời rồi thay thế sau. Điều này đảm bảo dữ liệu tỷ giá luôn đến từ engine thật, đồng thời giúp nhóm phát triển song song cả hai ngôn ngữ.
 
 ## **2.2 Product Functions**
 
@@ -107,7 +109,7 @@ Các nhóm chức năng chính của VaultX:
 | Identity & Auth | Đăng ký, đăng nhập, JWT, OAuth2 (Google), KYC-lite, RBAC (user/premium/admin) |
 | Wallet Management | Tạo ví đa tiền tệ, double-entry ledger, xem số dư, lịch sử giao dịch |
 | Transfer & FX | P2P transfer, FX conversion, Saga rollback, idempotency, outbox pattern |
-| FX Rate Engine | C++17 TCP server (Boost.Asio) nhận mock rate feed, tính spread, publish Kafka; Java Kafka consumer cache vào Redis TTL 10s |
+| FX Rate Engine | Rust async TCP server (Tokio) nhận mock rate feed, tính spread, publish Kafka; Java Kafka consumer cache vào Redis TTL 10s |
 | Spending Analytics | Phân loại chi tiêu, trend theo thời gian, so sánh budget vs actual, export CSV |
 | Fraud Detection | Velocity check, unusual amount, new device flag, hold \+ notify |
 | Notification | Email, push notification, WebSocket real-time balance update |
@@ -132,7 +134,7 @@ Các nhóm chức năng chính của VaultX:
 
 * Cache: Redis 7.x standalone (hoặc Redis Cluster cho production-like setup).
 
-* FX Rate Engine: C++17, build với CMake 3.20+, Boost 1.82+, librdkafka 2.x.
+* FX Rate Engine: Rust (latest stable), build với Cargo, Tokio 1.x, rdkafka crate 0.36+.
 
 * Frontend: React 18, chạy trên CDN hoặc static hosting (Vercel, Netlify, S3 \+ CloudFront).
 
@@ -144,7 +146,7 @@ Các nhóm chức năng chính của VaultX:
 
 * Tất cả Java service sử dụng Spring Boot 4.x, Java 21 LTS. Ba thư viện core bắt buộc: Spring Boot, Spring Data JPA, Spring Security.
 
-* C++ FX Engine sử dụng C++17 standard, không dùng thư viện có license không tương thích.
+* Rust FX Engine sử dụng Rust stable toolchain, tất cả dependency phải có license tương thích (MIT/Apache-2.0).
 
 * Database schema tuân thủ 3NF (Third Normal Form).
 
@@ -155,6 +157,14 @@ Các nhóm chức năng chính của VaultX:
 * Idempotency key bắt buộc cho tất cả transfer request.
 
 * Không lưu trữ thông tin thẻ thanh toán thật (PCI-DSS scope). Schema migration bắt buộc dùng Flyway — không dùng spring.jpa.hibernate.ddl-auto=create/update trong staging/production. Entity mapping giữa layer dùng MapStruct; không dùng manual setter chain hoặc ModelMapper. Distributed lock cho wallet balance dùng Redisson (Redlock algorithm) thay vì DB-level lock thuần.
+
+* Mỗi Java service **bắt buộc** áp dụng Hexagonal Architecture (Ports & Adapters) với cấu trúc package theo Section 3.6. Pull Request vi phạm cấu trúc này sẽ bị reject trong Code Review.
+
+* `domain/` package **không được** import bất kỳ class nào từ: `org.springframework.*`, `jakarta.persistence.*`, `org.hibernate.*`. Chỉ được dùng Java standard library và module Shared Kernel (`vaultx-common`).
+
+* **MapStruct mapper** phải được đặt trong `infrastructure/adapter/outbound/persistence/` để mapping giữa Domain Entity và JPA Entity.
+
+* **gRPC Protobuf message** là DTO của lớp Infrastructure. Adapter trong `infrastructure/adapter/inbound/grpc/` phải dịch Protobuf → Domain Command/Query (Anti-Corruption Layer).
 
 ## **2.6 Assumptions and Dependencies**
 
@@ -168,11 +178,21 @@ Các nhóm chức năng chính của VaultX:
 
 * OTP trong flow chuyển tiền là mock 6 chữ số gửi qua email; chưa tích hợp SMS gateway.
 
-* **C++ FX Engine được phát triển đồng thời với các service Java ngay từ đầu, sử dụng mock feed simulator riêng.** Kafka topic `fx.rates.raw` sẽ có dữ liệu từ C++ engine ngay từ Phase 1, thay vì dùng mock consumer Java.
+* **Rust FX Engine được phát triển đồng thời với các service Java ngay từ đầu, sử dụng mock feed simulator riêng.** Kafka topic `fx.rates.raw` sẽ có dữ liệu từ Rust engine ngay từ Phase 1, thay vì dùng mock consumer Java.
+
+## **2.7 Architecture Principles**
+
+VaultX áp dụng **Domain-Driven Design (DDD)** kết hợp **Hexagonal Architecture (Ports & Adapters)** cho mỗi Java Microservice, tuân thủ các nguyên tắc sau:
+
+1. **Domain Independence:** Lớp `domain` không được import bất kỳ class nào từ Spring Framework, JPA, hoặc thư viện infrastructure. Domain là Java thuần.
+2. **Dependency Inversion:** Lớp `application` chỉ phụ thuộc vào `domain`. Lớp `infrastructure` phụ thuộc vào `application` và `domain`, không bao giờ ngược lại.
+3. **Port as Contract:** Mọi giao tiếp giữa `application` và `infrastructure` phải qua Interface (Port). IoC Container của Spring chịu trách nhiệm inject Adapter cụ thể vào Port.
+4. **Rich Domain Model:** Business logic (validation, calculation, state transition) phải nằm trong Domain Entities/Aggregates, không phải trong Application Service class.
+5. **Shared Kernel:** Các Value Object dùng chung giữa nhiều service (`Money`, `Currency`, `WalletId`, `UserId`) được đặt trong module `vaultx-common` — đây là Shared Kernel trong DDD, được quản lý phiên bản cẩn thận.
 
 # **3. System Architecture**
 
-(Giữ nguyên toàn bộ kiến trúc như bản 1.1, bao gồm Service Catalogue, Inter-Service Communication, C++ FX Engine Technical Detail, Saga Flow.)
+(Giữ nguyên toàn bộ kiến trúc như bản 1.1, bao gồm Service Catalogue, Inter-Service Communication, Rust FX Engine Technical Detail, Saga Flow.)
 
 ## **3.1 Architecture Overview**
 
@@ -181,7 +201,7 @@ VaultX áp dụng kiến trúc microservices với 6 Java service riêng biệt,
 2. **gRPC (Internal Service-to-Service):** Giao tiếp đồng bộ nội bộ giữa các Java Microservices sử dụng gRPC (Protobuf) để đạt hiệu năng cao và strongly-typed contract.
 3. **REST API (Edge Cases):** Được giữ lại cho các luồng đặc thù như OAuth2 (Google Login), Webhook, hoặc Upload file (multipart/form-data).
 
-Giao tiếp bất đồng bộ vẫn được xử lý qua Apache Kafka (KRaft mode). C++ FX Rate Engine là component biệt lập, giao tiếp với Java consumer qua Kafka topic. Mỗi Java service áp dụng layered architecture chuẩn: Controller/gRPC Service → Service → Repository (Spring Data JPA), với DTO↔Entity mapping qua MapStruct và schema versioning qua Flyway.
+Giao tiếp bất đồng bộ vẫn được xử lý qua Apache Kafka (KRaft mode). Rust FX Rate Engine là component biệt lập, giao tiếp với Java consumer qua Kafka topic. Mỗi Java service áp dụng **Hexagonal Architecture (Ports & Adapters)** với 3 lớp: `domain/` (Entities, Aggregates, Value Objects, Domain Events — Java thuần, không phụ thuộc framework), `application/` (Use Cases, Ports — phụ thuộc chỉ vào domain), `infrastructure/` (REST Controllers, gRPC Services, JPA Repositories, Kafka Adapters — implements Ports). DTO↔Entity mapping qua MapStruct (trong lớp infrastructure) và schema versioning qua Flyway.
 
 ## **3.2 Service Catalogue**
 
@@ -193,7 +213,7 @@ Giao tiếp bất đồng bộ vẫn được xử lý qua Apache Kafka (KRaft m
 | Transfer Service | Spring Boot 4 \+ Spring Kafka \+ Spring Data JPA \+ gRPC | P2P transfer, FX conversion, Saga choreography qua Kafka; @Transactional boundary rõ ràng; Outbox relay bằng Quartz | PostgreSQL; Flyway; Quartz job store (in-memory hoặc JDBC) |
 | Analytics Service | Spring Boot 4 \+ Spring Batch \+ Spring Data JPA \+ gRPC | Spending aggregation, CQRS materialized view, budget alert, CSV export (REST); Kafka consumer cập nhật snapshot | PostgreSQL; Flyway; Spring Batch JobRepository |
 | Notification Service | Spring Boot 4 \+ Spring Web MVC \+ Spring Kafka | Kafka consumer; email via JavaMailSender; WebSocket real-time qua STOMP over WebSocket (Spring MVC, không dùng reactive); session mapping qua Redis | Redis (STOMP session store); PostgreSQL (notification\_log) |
-| FX Rate Engine | C++17 \+ Boost.Asio | TCP server, rate feed ingestion, spread calculation, Kafka publish | Stateless (Redis cache via Java consumer) |
+| FX Rate Engine | Rust \+ Tokio | Async TCP server, rate feed ingestion, spread calculation, Kafka publish | Stateless (Redis cache via Java consumer) |
 
 ## **3.3 Inter-Service Communication**
 
@@ -207,7 +227,7 @@ Giao tiếp bất đồng bộ vẫn được xử lý qua Apache Kafka (KRaft m
 
 | Kafka Topic | Producer | Consumer(s) | Purpose |
 | ----- | ----- | ----- | ----- |
-| fx.rates.raw | FX Rate Engine (C++) | Wallet Service (Java) | Publish tỷ giá raw mỗi 5 giây |
+| fx.rates.raw | FX Rate Engine (Rust) | Wallet Service (Java) | Publish tỷ giá raw mỗi 5 giây |
 | fx.rates.processed | Wallet Service | Transfer Service, Frontend (via WS) | Tỷ giá đã tính spread, sẵn sàng dùng |
 | transfer.initiated | Transfer Service | Wallet Service, Notification Service | Bắt đầu saga chuyển tiền |
 | wallet.debited | Wallet Service | Transfer Service | Xác nhận debit thành công trong saga |
@@ -217,17 +237,17 @@ Giao tiếp bất đồng bộ vẫn được xử lý qua Apache Kafka (KRaft m
 | fraud.flagged | Transfer Service | Notification Service, Admin Service | Phát hiện giao dịch bất thường |
 | kyc.submitted | Identity Service | Notification Service | Người dùng submit KYC — notify admin |
 
-## **3.4 C++ FX Rate Engine — Technical Detail**
+## **3.4 Rust FX Rate Engine — Technical Detail**
 
-FX Rate Engine là một TCP server bất đồng bộ xây dựng với Boost.Asio. Server chấp nhận kết nối từ mock rate feed simulator (một process riêng), nhận raw rate data theo binary protocol (Protobuf), tính toán mid/bid/ask rate, rồi publish lên Kafka topic fx.rates.raw mỗi 5 giây.
+FX Rate Engine là một async TCP server xây dựng với Tokio (Rust). Server chấp nhận kết nối từ mock rate feed simulator (một process riêng), nhận raw rate data theo binary protocol (Protobuf via prost crate), tính toán mid/bid/ask rate, rồi publish lên Kafka topic fx.rates.raw mỗi 5 giây.
 
 | Component | Technology | Detail |
 | ----- | ----- | ----- |
-| TCP Async Server | Boost.Asio (C++17) | Chấp nhận nhiều kết nối đồng thời bằng io\_context \+ strand |
-| Rate Feed Simulator | C++17 | Mock process gửi raw rate data qua TCP; thay thế external provider |
-| Binary Protocol | Protobuf v3 | Định dạng message: currency\_pair, raw\_mid, timestamp, source\_id |
-| Spread Calculation | C++17 arithmetic | bid \= mid \* (1 \- spread\_bps/10000), ask \= mid \* (1 \+ spread\_bps/10000) |
-| Kafka Producer | librdkafka (C) | Publish message vào topic fx.rates.raw; acks=all; retry=3 |
+| Async TCP Server | Tokio (Rust) | Chấp nhận nhiều kết nối đồng thời bằng async/await runtime |
+| Rate Feed Simulator | Rust | Mock process gửi raw rate data qua TCP; thay thế external provider |
+| Binary Protocol | Protobuf v3 (prost crate) | Định dạng message: currency\_pair, raw\_mid, timestamp, source\_id |
+| Spread Calculation | Rust arithmetic | bid \= mid \* (1 \- spread\_bps/10000), ask \= mid \* (1 \+ spread\_bps/10000) |
+| Kafka Producer | rdkafka crate (rust-rdkafka) | Publish message vào topic fx.rates.raw; acks=all; retry=3 |
 | Rate Cache Update | Java Kafka Consumer | Java service consume topic, cache vào Redis với TTL 10s |
 
 ## **3.5 Saga Flow — FX Transfer**
@@ -245,6 +265,75 @@ FX Rate Engine là một TCP server bất đồng bộ xây dựng với Boost.A
 | 7 | Transfer Service | Mark transfer COMPLETED, publish transfer.completed event | Compensate all previous steps |
 | 8 | Analytics Service | Consume transfer.completed, update spending snapshot | Retry via Kafka (non-critical) |
 | 9 | Notification Service | Consume transfer.completed, push WebSocket \+ email | Retry via Kafka (non-critical) |
+
+## **3.6 Standard Package Structure (Per Java Service)**
+
+Tất cả Java service phải tuân thủ cấu trúc package sau. Quy tắc phụ thuộc: `infrastructure → application → domain`. Không bao giờ ngược lại.
+
+```text
+com.vaultx.{service}/
+├── domain/
+│   ├── model/           # Aggregates, Entities, Value Objects
+│   ├── event/           # Domain Events (immutable records)
+│   ├── exception/       # Domain-specific exceptions
+│   └── service/         # Domain Services (stateless, cross-aggregate logic)
+├── application/
+│   ├── port/
+│   │   ├── inbound/     # Use Case Interfaces (commands/queries)
+│   │   └── outbound/    # Repository Ports, External Service Ports
+│   └── service/         # Application Services (implements inbound ports)
+└── infrastructure/
+    ├── adapter/
+    │   ├── inbound/
+    │   │   ├── rest/     # @RestController (OAuth2, KYC upload)
+    │   │   ├── grpc/     # gRPC Service implementations
+    │   │   └── kafka/    # Kafka Consumers (@KafkaListener)
+    │   └── outbound/
+    │       ├── persistence/  # JPA Entities + Spring Data Repos + Port Adapters
+    │       ├── kafka/        # Kafka Producers (implements EventPublisherPort)
+    │       └── redis/        # Redis Cache Adapters (implements CachePort)
+    └── config/           # Spring @Configuration, Security, Bean wiring
+```
+
+Module **`vaultx-common`** (Shared Kernel) chứa các Value Object dùng chung: `Money`, `Currency`, `WalletId`, `UserId`, `TransferId`. Tất cả service import module này.
+
+## **3.7 Domain Model per Service**
+
+### **3.7.1 Wallet Service — Domain Model**
+
+| Thành phần DDD | Tên | Mô tả |
+| :--- | :--- | :--- |
+| **Aggregate Root** | `Wallet` | Sở hữu danh sách `LedgerEntry`. Method `getBalance()` tính balance trực tiếp từ entries. Invariant: balance ≥ 0 |
+| **Entity** | `LedgerEntry` | Immutable sau khi tạo, append-only. Chỉ thuộc về 1 Wallet |
+| **Value Object** | `Money` | `amount (BigDecimal)` + `currency (Currency)`. Bất biến. Shared Kernel |
+| **Value Object** | `WalletId` | UUID wrapper, strongly-typed. Shared Kernel |
+| **Domain Event** | `WalletDebitedEvent` | Phát ra sau khi ghi DEBIT entry thành công |
+| **Domain Event** | `WalletCreditedEvent` | Phát ra sau khi ghi CREDIT entry thành công |
+| **Outbound Port** | `WalletRepositoryPort` | `save(Wallet)`, `findById(WalletId)`, `findByUserId(UserId)` |
+| **Outbound Port** | `BalanceCachePort` | `cacheBalance(WalletId, Money)`, `getBalance(WalletId)` |
+| **Inbound Port** | `DebitWalletUseCase` | `execute(DebitWalletCommand)` |
+| **Inbound Port** | `CreditWalletUseCase` | `execute(CreditWalletCommand)` |
+| **Inbound Port** | `GetBalanceQuery` | `execute(GetBalanceQuery)` |
+
+**Aggregate Invariants:** (1) Balance sau mỗi DEBIT ≥ 0; (2) Wallet phải ACTIVE để giao dịch; (3) Currency của LedgerEntry phải khớp với Wallet.
+
+### **3.7.2 Transfer Service — Domain Model**
+
+| Thành phần DDD | Tên | Mô tả |
+| :--- | :--- | :--- |
+| **Aggregate Root** | `Transfer` | Quản lý toàn bộ vòng đời giao dịch chuyển tiền |
+| **Value Object** | `TransferId` | UUID wrapper. Shared Kernel |
+| **Value Object** | `IdempotencyKey` | String wrapper, enforce uniqueness |
+| **Value Object** | `FxRate` | `fromCurrency`, `toCurrency`, `rate`, `lockedAt`, `expiresAt` |
+| **Value Object** | `TransferAmount` | `fromAmount (Money)` + `toAmount (Money)` + `feeAmount (Money)` |
+| **Domain Event** | `TransferInitiatedEvent` | Khi Transfer được tạo ở trạng thái PENDING |
+| **Domain Event** | `TransferCompletedEvent` | Khi Saga hoàn thành thành công |
+| **Domain Event** | `TransferFailedEvent` | Khi Saga thất bại, cần compensate |
+| **Domain Service** | `FxConversionService` | Tính `toAmount = fromAmount * fxRate * (1 - feeRate)`. Cross-aggregate logic |
+| **Domain Service** | `FraudRuleEngine` | Velocity check, unusual amount check |
+| **Outbound Port** | `TransferRepositoryPort` | `save(Transfer)`, `findById(TransferId)` |
+| **Outbound Port** | `FxRateCachePort` | `getRate(Currency, Currency): Optional<FxRate>` |
+| **Outbound Port** | `EventPublisherPort` | `publish(DomainEvent)` — implemented via Outbox pattern |
 
 # **4\. Functional Requirements**
 
@@ -714,7 +803,7 @@ Unique constraint: (user\_id, currency\_code, category\_id, period\_type, period
 | **id** | uuid | NOT NULL | **PK** | Primary key |
 | from\_currency | varchar(3) | NOT NULL | **FK** | FK → currencies.code |
 | to\_currency | varchar(3) | NOT NULL | **FK** | FK → currencies.code |
-| mid\_rate | numeric(20,10) | NOT NULL |  | Tỷ giá trung tâm từ C++ engine |
+| mid\_rate | numeric(20,10) | NOT NULL |  | Tỷ giá trung tâm từ Rust engine |
 | bid\_rate | numeric(20,10) | NOT NULL |  | Tỷ giá mua \= mid \* (1 \- spread\_bps/10000) |
 | ask\_rate | numeric(20,10) | NOT NULL |  | Tỷ giá bán \= mid \* (1 \+ spread\_bps/10000) |
 | spread\_bps | smallint | NOT NULL |  | Spread tính theo basis points; cấu hình bởi admin |
@@ -813,7 +902,7 @@ Client kết nối WebSocket tại ws://gateway/ws (qua Nginx upgrade). Sau khi 
 | FRAUD\_ALERT | Sau khi fraud flag được tạo | { transfer\_id, reason, action\_required, deadline } |
 | BUDGET\_ALERT | Khi chi tiêu vượt threshold | { category\_name, budget\_amount, spent\_amount, percentage, currency } |
 
-## **7.4 C++ FX Engine — Kafka Message Format**
+## **7.4 Rust FX Engine — Kafka Message Format**
 
 FX Rate Engine publish message lên Kafka topic fx.rates.raw với format Protobuf v3.
 
@@ -827,29 +916,29 @@ FX Rate Engine publish message lên Kafka topic fx.rates.raw với format Protob
 | sequence\_num | int64 | Số thứ tự tăng dần để detect out-of-order message |
 # **8. Development Roadmap**
 
-## **8.1 Phase Overview (Cập nhật – Tích hợp C++ sớm)**
+## **8.1 Phase Overview (Cập nhật – Tích hợp Rust sớm)**
 
 | Phase | Name | Duration | Demo Milestone |
 | ----- | ----- | ----- | ----- |
-| 1 | Foundation: Auth, Wallet, P2P Transfer & C++ FX Engine | 5–6 tuần | Đăng ký, đăng nhập, ví đa tiền, P2P same-currency, C++ engine publish tỷ giá |
-| 2 | FX Conversion, Saga & Outbox | 4–5 tuần | FX conversion end-to-end với tỷ giá từ C++, Saga rollback, outbox pattern |
+| 1 | Foundation: Auth, Wallet, P2P Transfer & Rust FX Engine | 5–6 tuần | Đăng ký, đăng nhập, ví đa tiền, P2P same-currency, Rust engine publish tỷ giá |
+| 2 | FX Conversion, Saga & Outbox | 4–5 tuần | FX conversion end-to-end với tỷ giá từ Rust, Saga rollback, outbox pattern |
 | 3 | Analytics, Batch, Fraud Detection & Notification | 4–5 tuần | Dashboard chi tiêu, Spring Batch, fraud alert, WebSocket thời gian thực |
 | 4 | KYC & Admin Panel | 3–4 tuần | KYC submission/review, admin quản lý user, fraud flag, cấu hình spread |
 | 5 | DevOps & Observability | 3–4 tuần | Kubernetes, CI/CD, Prometheus, Grafana, Jaeger, load test |
 
-## **8.2 Phase 1 — Foundation: Auth, Wallet, P2P & C++ FX Engine (5–6 tuần)**
+## **8.2 Phase 1 — Foundation: Auth, Wallet, P2P & Rust FX Engine (5–6 tuần)**
 
-Mục tiêu: Xây dựng các service nền tảng và có dữ liệu tỷ giá thật từ C++ engine chạy liên tục.
+Mục tiêu: Xây dựng các service nền tảng và có dữ liệu tỷ giá thật từ Rust engine chạy liên tục.
 
 **Deliverables:**
 
-- **C++ FX Rate Engine & Simulator:** TCP server (Boost.Asio) nhận dữ liệu từ mock feed, tính mid/bid/ask, publish lên Kafka topic `fx.rates.raw`. Chạy trong container Docker. C++ simulator gửi rate mỗi 2-5 giây.
+- **Rust FX Rate Engine & Simulator:** Async TCP server (Tokio) nhận dữ liệu từ mock feed, tính mid/bid/ask, publish lên Kafka topic `fx.rates.raw`. Chạy trong container Docker. Rust simulator gửi rate mỗi 2-5 giây.
 - **Java Kafka Consumer** (có thể trong Wallet Service hoặc một service nhỏ `fx-gateway`): Consume `fx.rates.raw`, tính spread theo cấu hình cứng (ví dụ 50 bps), cache vào Redis (`fx:rate:<from>:<to>`, TTL 10s).
 - **Identity Service:** Đăng ký, đăng nhập JWT, email verify, refresh token. Tài khoản mặc định role USER.
 - **Wallet Service:** Tạo ví VND mặc định khi đăng ký, double-entry ledger, mock top-up, xem số dư (có thể dùng cache Redis), lịch sử giao dịch.
 - **Transfer Service (P2P nội tệ):** Chuyển tiền VND → VND đồng bộ với `@Transactional` + Redisson distributed lock + Idempotency key. Chưa có Kafka.
 - **API Gateway (BFF):** Spring Boot 4 + Spring GraphQL (cổng 8080). Định nghĩa `schema.graphqls`. JWT validation tại gateway. GraphiQL interface cho dev/testing. Các GraphQL Resolver gọi gRPC xuống Identity, Wallet, Transfer.
-- **Docker Compose:** đầy đủ PostgreSQL, Kafka, Redis, Nginx, C++ engine, các Java service.
+- **Docker Compose:** đầy đủ PostgreSQL, Kafka, Redis, Nginx, Rust engine, các Java service.
 - **React cơ bản:** Đăng nhập, đăng ký, xem số dư, form chuyển tiền VND.
 
 > **Lưu ý:** Ở phase này, Transfer Service chỉ hỗ trợ chuyển cùng tiền, chưa có FX conversion.
@@ -858,7 +947,7 @@ Mục tiêu: Xây dựng các service nền tảng và có dữ liệu tỷ giá
 
 **Deliverables:**
 
-- **Mở rộng Transfer Service** hỗ trợ FX conversion, lấy tỷ giá từ Redis (được cập nhật bởi C++ engine).
+- **Mở rộng Transfer Service** hỗ trợ FX conversion, lấy tỷ giá từ Redis (được cập nhật bởi Rust engine).
 - **Saga pattern** cho FX transfer: dùng Kafka với các topic `transfer.initiated`, `wallet.debited`, `wallet.credited`, `transfer.completed`, `transfer.failed`. Outbox pattern trong cả Transfer Service và Wallet Service.
 - **Compensating transaction** khi rollback, đảm bảo double-entry ledger cân bằng.
 - **Rate lock 30 giây** khi preview, fee calculation.
@@ -898,7 +987,7 @@ Mục tiêu: Xây dựng các service nền tảng và có dữ liệu tỷ giá
 
 | Milestone | Employability Signal |
 | ----- | ----- |
-| Phase 1–2 hoàn thành | Microservices thực thụ, C++ engine tích hợp thật, Kafka, Saga – thể hiện năng lực thiết kế hệ thống phân tán và phát triển đa ngôn ngữ |
+| Phase 1–2 hoàn thành | Microservices thực thụ, Rust engine tích hợp thật, Kafka, Saga – thể hiện năng lực thiết kế hệ thống phân tán và phát triển đa ngôn ngữ |
 | Phase 3 hoàn thành | Spring Batch, CQRS, analytics pipeline thời gian thực – phù hợp với phỏng vấn fintech |
 | Phase 4–5 hoàn thành | Hệ thống production-ready, K8s, CI/CD, monitoring – đủ sức apply mid/senior backend |
 
@@ -906,16 +995,16 @@ Mục tiêu: Xây dựng các service nền tảng và có dữ liệu tỷ giá
 
 (Giữ nguyên Technology Evaluation và các phần khác như bản 1.1, cập nhật nếu cần.)
 
-## **9.1 Technology Evaluation — C++ vs Java cho FX Engine**
+## **9.1 Technology Evaluation — Rust vs Java cho FX Engine**
 
-Việc dùng C++17 cho FX Rate Engine là một lựa chọn có chủ đích để học hỏi, không phải tối ưu đơn thuần. Bảng sau so sánh hai lựa chọn:
+Việc dùng Rust cho FX Rate Engine là một lựa chọn có chủ đích để học hỏi, không phải tối ưu đơn thuần. Bảng sau so sánh hai lựa chọn:
 
-| Criterion | C++17 (Chosen) | Java Alternative |
+| Criterion | Rust (Chosen) | Java Alternative |
 | ----- | ----- | ----- |
-| Latency | Latency thấp hơn do ít overhead GC; phù hợp với rate feed liên tục | Spring Web MVC \+ Kafka consumer cũng đạt được throughput tốt với ít overhead hơn; GC pause ít ảnh hưởng hơn ở mức latency 5-giây publish cycle |
-| Learning Value | Học được async I/O (Boost.Asio), binary protocol (Protobuf), Kafka C client | Ít learning value hơn vì đã có Java service khác trong project |
-| Complexity | Khó debug hơn; build system (CMake) phức tạp hơn Maven/Gradle | Dễ tích hợp hơn vào Spring MVC \+ JPA ecosystem; debug dễ hơn; không cần học Boost.Asio |
-| Justification | C++ là điểm khác biệt rõ ràng trong CV; phù hợp với mục tiêu học sâu về systems programming | Đủ cho production nhưng không tạo ra learning differentiation |
+| Latency | Latency thấp hơn do không có GC; zero-cost abstractions; phù hợp với rate feed liên tục | Spring Web MVC \+ Kafka consumer cũng đạt được throughput tốt; GC pause ít ảnh hưởng ở mức 5-giây publish cycle |
+| Learning Value | Học được async I/O (Tokio), ownership/borrow checker, unsafe interop, Kafka Rust client | Ít learning value hơn vì đã có Java service khác trong project |
+| Complexity | Borrow checker có learning curve; nhưng compiler bắt lỗi tại compile-time, ít bug runtime hơn C/C++ | Dễ tích hợp hơn vào Spring MVC \+ JPA ecosystem |
+| Justification | Rust là điểm khác biệt rõ ràng trong CV; memory safety không cần GC; phù hợp với mục tiêu học sâu về systems programming | Đủ cho production nhưng không tạo ra learning differentiation |
 
 ## **9.2 Known Limitations & Future Work**
 
@@ -935,3 +1024,4 @@ Việc dùng C++17 cho FX Rate Engine là một lựa chọn có chủ đích đ
 | 1.0 | May 2026 | VaultX Engineering Team | Initial SRS — full document, 3NF DB design, all functional & non-functional requirements |
 | 1.1 | May 2026 | VaultX Engineering Team | Updated tech stack constraints: Flyway mandatory, MapStruct, Redisson, Spring MVC for WebSocket |
 | 1.2 | May 2026 | VaultX Engineering Team | Development roadmap revised: C++ FX Engine developed in parallel from Phase 1; FX conversion moved to Phase 2; overall timeline adjusted for early C++ integration. |
+| 1.3 | May 2026 | VaultX Engineering Team | Architecture: DDD + Hexagonal Architecture mandatory for all Java services (Sections 2.7, 3.6, 3.7). C++ FX Engine replaced with Rust (Tokio + rdkafka). Domain Model defined for Wallet and Transfer services. Shared Kernel module `vaultx-common` introduced. Design constraints updated (Section 2.5). |
